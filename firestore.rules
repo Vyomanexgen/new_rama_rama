@@ -2,43 +2,86 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function isRole(roles) {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && userDoc().data.role in roles;
+    }
+
+    function isManagerOrAdmin() {
+      return isRole(['admin', 'manager', 'superadmin']);
+    }
+
     // Users collection - allow users to read and update their own profile
     match /users/{userId} {
-      // Allow users to read their own profile
-      allow read: if request.auth != null && request.auth.uid == userId;
-      
-      // Allow users to update their own profile (but not change role or email)
-      allow update: if request.auth != null 
+      allow read: if isSignedIn() && request.auth.uid == userId;
+
+      allow update: if isSignedIn()
                     && request.auth.uid == userId
                     && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'email']));
-      
-      // Allow users to create their own profile document on first login
-      allow create: if request.auth != null && request.auth.uid == userId;
-      
-      // Allow admins and superadmins to read all user profiles
-      allow read: if request.auth != null 
-                  && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-                  && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'superadmin'];
-      
-      // Allow admins and superadmins to update any user profile
-      allow write: if request.auth != null 
-                   && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-                   && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'superadmin'];
+
+      allow create: if isSignedIn() && request.auth.uid == userId;
+
+      allow read: if isManagerOrAdmin();
+      allow write: if isManagerOrAdmin();
     }
-    
+
+    // Employees collection - allow employees to read their own profile
+    match /employees/{employeeId} {
+      allow read: if isSignedIn() && (
+        resource.data.firebaseUid == request.auth.uid ||
+        resource.data.uid == request.auth.uid ||
+        employeeId == request.auth.uid ||
+        isManagerOrAdmin()
+      );
+
+      allow update: if isManagerOrAdmin()
+        || (isSignedIn()
+          && (resource.data.firebaseUid == request.auth.uid || resource.data.uid == request.auth.uid || employeeId == request.auth.uid)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastLoginAt'])
+        );
+
+      allow create, delete: if isManagerOrAdmin();
+    }
+
     // Attendance collection - allow users to create their own attendance records
     match /attendance/{attendanceId} {
-      allow create: if request.auth != null;
-      allow read: if request.auth != null 
-                  && (request.auth.uid == resource.data.uid 
-                      || exists(/databases/$(database)/documents/users/$(request.auth.uid))
-                      && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'manager', 'superadmin']);
-      allow update, delete: if request.auth != null 
-                           && request.auth.uid == resource.data.uid;
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+
+      allow read: if isSignedIn() && (
+        request.auth.uid == resource.data.uid ||
+        isManagerOrAdmin()
+      );
+
+      allow update: if isSignedIn() && (
+        request.auth.uid == resource.data.uid ||
+        request.auth.uid == request.resource.data.uid
+      );
+
+      allow delete: if isSignedIn() && request.auth.uid == resource.data.uid;
     }
-    
-    // Default deny all other access
+
+    // Location logs - allow users to write their own location and managers to read
+    match /locationLogs/{logId} {
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+
+      allow read: if isSignedIn() && (
+        resource.data.uid == request.auth.uid ||
+        isManagerOrAdmin()
+      );
+
+      allow delete: if false;
+      allow update: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

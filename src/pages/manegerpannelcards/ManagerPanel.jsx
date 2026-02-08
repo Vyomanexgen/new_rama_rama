@@ -25,6 +25,7 @@ import Sidebar from "../../components/managerpanel/Sidebar";
 import StatCard from "../../components/StatCard";
 import TrackStatus from "../../components/TrackStatus";
 import ActionButton from "../../components/ActionButton";
+import { managerApi } from "../../api/managerApi";
 
 // Pages
 import Attendance from "./Attendance";
@@ -32,6 +33,7 @@ import Fingerprint from "./Fingerprint";
 import Location from "./Location ";
 import Employees from "./Employees ";
 import Reports from "./Reports ";
+import Announcements from "./Announcements";
 import Settings from "./manager/settings/Settings";
 import PageNotFound from "../PageNotFound";
 
@@ -49,6 +51,8 @@ export default function ManagerPanel() {
   const [stepIndex, setStepIndex] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [dashboardData, setDashboardData] = useState(null);
+  const [dashboardError, setDashboardError] = useState("");
   const location = useLocation();
 
   // 🔐 LOGOUT
@@ -73,16 +77,39 @@ export default function ManagerPanel() {
     "/manager/location": "Location Tracking",
     "/manager/employees": "Employee Management",
     "/manager/reports": "Reports & Analytics",
+    "/manager/announcements": "Announcements",
     "/manager/settings": "Settings",
   };
 
   const currentTitle = pageTitles[location.pathname] || "Dashboard";
+
+  const quickActions = [
+    { label: "Mark Attendance", path: "/manager/attendance" },
+    { label: "Register Fingerprint", path: "/manager/fingerprint" },
+    { label: "Track Location", path: "/manager/location" },
+    { label: "View Employees", path: "/manager/employees" },
+    { label: "View Reports", path: "/manager/reports" },
+  ];
 
   // Close dropdown on outside click
   useEffect(() => {
     const close = () => setProfileOpen(false);
     window.addEventListener("click", close);
     return () => window.removeEventListener("click", close);
+  }, []);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setDashboardError("");
+        const res = await managerApi.dashboard();
+        setDashboardData(res.data);
+      } catch (e) {
+        console.error("DASHBOARD LOAD ERROR:", e);
+        setDashboardError("Failed to load dashboard");
+      }
+    };
+    load();
   }, []);
 
   // Tutorial
@@ -166,54 +193,134 @@ export default function ManagerPanel() {
               path="/"
               element={
                 <>
+                  {dashboardError && (
+                    <div className="mb-4 text-sm text-red-600">{dashboardError}</div>
+                  )}
                   <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
-                    <StatCard title="Present Today" value="0" color="bg-green-500" icon={<FaCheckCircle />} />
-                    <StatCard title="Late Today" value="0" color="bg-yellow-500" icon={<FaUserClock />} />
-                    <StatCard title="Absent Today" value="0" color="bg-red-500" icon={<FaUsers />} />
-                    <StatCard title="Half Day" value="0" color="bg-blue-500" icon={<FaCalendarAlt />} />
+                    <StatCard
+                      title="Present Today"
+                      value={dashboardData?.totals?.presentToday ?? 0}
+                      color="bg-green-500"
+                      icon={<FaCheckCircle />}
+                    />
+                    <StatCard
+                      title="Late Today"
+                      value={dashboardData?.totals?.lateToday ?? 0}
+                      color="bg-yellow-500"
+                      icon={<FaUserClock />}
+                    />
+                    <StatCard
+                      title="Absent Today"
+                      value={dashboardData?.totals?.absentToday ?? 0}
+                      color="bg-red-500"
+                      icon={<FaUsers />}
+                    />
+                    <StatCard
+                      title="Half Day"
+                      value={dashboardData?.totals?.halfDayToday ?? 0}
+                      color="bg-blue-500"
+                      icon={<FaCalendarAlt />}
+                    />
                   </div>
 
                   <div className="bg-orange-50 p-4 rounded-lg mb-6">
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <TrackStatus color="text-green-600" label="Within Range" count="0" icon={<FaCheckCircle />} />
-                      <TrackStatus color="text-red-600" label="Out of Range" count="0" icon={<FaTimesCircle />} />
-                      <TrackStatus color="text-gray-600" label="Not Tracked" count="5" icon={<FaMapMarker />} />
+                      <TrackStatus
+                        color="text-green-600"
+                        label="Within Range"
+                        count={dashboardData?.locationSummary?.withinRange ?? 0}
+                        icon={<FaCheckCircle />}
+                      />
+                      <TrackStatus
+                        color="text-red-600"
+                        label="Out of Range"
+                        count={dashboardData?.locationSummary?.outOfRange ?? 0}
+                        icon={<FaTimesCircle />}
+                      />
+                      <TrackStatus
+                        color="text-gray-600"
+                        label="Not Tracked"
+                        count={dashboardData?.locationSummary?.notTracked ?? 0}
+                        icon={<FaMapMarker />}
+                      />
                     </div>
                   </div>
 
-                  <div className="flex gap-3 flex-wrap">
-                    <ActionButton label="Mark Attendance" />
-                    <ActionButton label="Register Fingerprint" />
-                    <ActionButton label="Track Location" />
-                    <ActionButton label="View Employees" />
-                    <ActionButton label="View Reports" />
-                  </div>
-                </>
-              }
-            />
+                <div className="flex gap-3 flex-wrap">
+                  {quickActions.map((action) => (
+                    <ActionButton
+                      key={action.path}
+                      label={action.label}
+                      onClick={() => navigate(action.path)}
+                    />
+                  ))}
+                </div>
+              </>
+            }
+          />
             <Route path="/dashboard" element={
               <>
+                {dashboardError && (
+                  <div className="mb-4 text-sm text-red-600">{dashboardError}</div>
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
-                  <StatCard title="Present Today" value="0" color="bg-green-500" icon={<FaCheckCircle />} />
-                  <StatCard title="Late Today" value="0" color="bg-yellow-500" icon={<FaUserClock />} />
-                  <StatCard title="Absent Today" value="0" color="bg-red-500" icon={<FaUsers />} />
-                  <StatCard title="Half Day" value="0" color="bg-blue-500" icon={<FaCalendarAlt />} />
+                  <StatCard
+                    title="Present Today"
+                    value={dashboardData?.totals?.presentToday ?? 0}
+                    color="bg-green-500"
+                    icon={<FaCheckCircle />}
+                  />
+                  <StatCard
+                    title="Late Today"
+                    value={dashboardData?.totals?.lateToday ?? 0}
+                    color="bg-yellow-500"
+                    icon={<FaUserClock />}
+                  />
+                  <StatCard
+                    title="Absent Today"
+                    value={dashboardData?.totals?.absentToday ?? 0}
+                    color="bg-red-500"
+                    icon={<FaUsers />}
+                  />
+                  <StatCard
+                    title="Half Day"
+                    value={dashboardData?.totals?.halfDayToday ?? 0}
+                    color="bg-blue-500"
+                    icon={<FaCalendarAlt />}
+                  />
                 </div>
 
                 <div className="bg-orange-50 p-4 rounded-lg mb-6">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <TrackStatus color="text-green-600" label="Within Range" count="0" icon={<FaCheckCircle />} />
-                    <TrackStatus color="text-red-600" label="Out of Range" count="0" icon={<FaTimesCircle />} />
-                    <TrackStatus color="text-gray-600" label="Not Tracked" count="5" icon={<FaMapMarker />} />
+                    <TrackStatus
+                      color="text-green-600"
+                      label="Within Range"
+                      count={dashboardData?.locationSummary?.withinRange ?? 0}
+                      icon={<FaCheckCircle />}
+                    />
+                    <TrackStatus
+                      color="text-red-600"
+                      label="Out of Range"
+                      count={dashboardData?.locationSummary?.outOfRange ?? 0}
+                      icon={<FaTimesCircle />}
+                    />
+                    <TrackStatus
+                      color="text-gray-600"
+                      label="Not Tracked"
+                      count={dashboardData?.locationSummary?.notTracked ?? 0}
+                      icon={<FaMapMarker />}
+                    />
                   </div>
                 </div>
 
                 <div className="flex gap-3 flex-wrap">
-                  <ActionButton label="Mark Attendance" />
-                  <ActionButton label="Register Fingerprint" />
-                  <ActionButton label="Track Location" />
-                  <ActionButton label="View Employees" />
-                  <ActionButton label="View Reports" />
+                  {quickActions.map((action) => (
+                    <ActionButton
+                      key={action.path}
+                      label={action.label}
+                      onClick={() => navigate(action.path)}
+                    />
+                  ))}
                 </div>
               </>
             } />
@@ -223,6 +330,7 @@ export default function ManagerPanel() {
             <Route path="/location" element={<Location />} />
             <Route path="/employees" element={<Employees />} />
             <Route path="/reports" element={<Reports />} />
+            <Route path="/announcements" element={<Announcements />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<PageNotFound />} />
           </Routes>

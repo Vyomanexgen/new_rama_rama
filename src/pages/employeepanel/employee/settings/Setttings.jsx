@@ -1,18 +1,76 @@
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { FaTimes } from "react-icons/fa";
 import PersonalInfo from "./tabs/PersonalInfo";
 import Security from "./tabs/Security";
 import Preferences from "./tabs/preferences";
+import { auth, db } from "../../../../firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState("personal");
+  const [profile, setProfile] = useState({
+    name: "Employee",
+    role: "Staff",
+    employeeId: "",
+    email: "",
+  });
+  const [loadingProfile, setLoadingProfile] = useState(true);
 
   const tabs = [
     { key: "personal", label: "Personal Information" },
     { key: "security", label: "Security" },
     { key: "preferences", label: "Preferences" },
   ];
+
+  const getInitials = (value) => {
+    if (!value) return "E";
+    const parts = value.split(" ").filter(Boolean);
+    if (parts.length === 1) return parts[0][0].toUpperCase();
+    return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+  };
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const user = auth.currentUser;
+        if (!user) {
+          setLoadingProfile(false);
+          return;
+        }
+
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          setProfile({
+            name: data.fullName || user.displayName || "Employee",
+            role: data.position || data.role || "Staff",
+            employeeId: data.employeeId || "",
+            email: user.email || "",
+          });
+        } else {
+          setProfile({
+            name: user.displayName || "Employee",
+            role: "Staff",
+            employeeId: "",
+            email: user.email || "",
+          });
+        }
+      } catch (e) {
+        const user = auth.currentUser;
+        setProfile({
+          name: user?.displayName || "Employee",
+          role: "Staff",
+          employeeId: "",
+          email: user?.email || "",
+        });
+      } finally {
+        setLoadingProfile(false);
+      }
+    };
+
+    loadProfile();
+  }, []);
 
   return (
     <>
@@ -55,7 +113,7 @@ export default function Settings() {
           <div className="px-6 py-6 border-b flex items-center gap-4">
             <div className="relative">
               <div className="w-16 h-16 sm:w-20 sm:h-20 bg-indigo-700 text-white flex items-center justify-center rounded-full text-2xl font-semibold">
-                Rj
+                {getInitials(profile.name)}
               </div>
 
               {/* Camera button */}
@@ -68,10 +126,12 @@ export default function Settings() {
 
             <div>
               <div className="text-lg sm:text-xl font-semibold text-slate-800">
-                Rajesh Kumar
+                {loadingProfile ? "Loading..." : profile.name}
               </div>
-              <p className="text-sm text-slate-500">Security Guard</p>
-              <p className="text-xs text-slate-400 mt-1">EMP001</p>
+              <p className="text-sm text-slate-500">{profile.role || "Staff"}</p>
+              {profile.employeeId ? (
+                <p className="text-xs text-slate-400 mt-1">{profile.employeeId}</p>
+              ) : null}
             </div>
           </div>
 

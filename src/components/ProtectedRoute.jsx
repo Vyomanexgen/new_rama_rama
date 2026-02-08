@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import { auth } from "../firebase";
+import { auth, db } from "../firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { ROLE_EMAILS } from "../config/roles";
+import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 
 /**
  * ProtectedRoute with optional `role` prop.
@@ -16,20 +16,54 @@ export default function ProtectedRoute({ role, children }) {
   const location = useLocation();
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
+    const unsub = onAuthStateChanged(auth, async (u) => {
       setUser(u);
-      setLoading(false);
 
       if (!u) {
         setAuthorized(false);
+        setLoading(false);
         return;
       }
 
-      if (role) {
-        const allowed = ROLE_EMAILS[role];
-        setAuthorized(u.email === allowed);
-      } else {
+      if (!role) {
         setAuthorized(true);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const userRef = doc(db, "users", u.uid);
+        const snap = await getDoc(userRef);
+
+        if (snap.exists()) {
+          const currentRole = snap.data().role;
+          if (currentRole === role) {
+            setAuthorized(true);
+          } else if (role === "employee" && (!currentRole || currentRole === "user")) {
+            // Allow employee access even if role wasn't set yet.
+            // Firestore rules may block role updates for self.
+            setAuthorized(true);
+          } else {
+            setAuthorized(false);
+          }
+        } else if (role === "employee") {
+          await setDoc(
+            userRef,
+            {
+              email: u.email,
+              role: "employee",
+              createdAt: serverTimestamp(),
+            },
+            { merge: true }
+          );
+          setAuthorized(true);
+        } else {
+          setAuthorized(false);
+        }
+      } catch {
+        setAuthorized(false);
+      } finally {
+        setLoading(false);
       }
     });
 

@@ -16,7 +16,7 @@ export default function Manager() {
       email,
     });
 
-    alert("Employee added");
+    alert("Employee added");a
   };
 
   return (

@@ -11,6 +11,7 @@ import Sidebar from "../../components/employeepanel/Sidebar";
 import Announcement from "./employee/Announcement";
 import MyAttendance from "./employee/MyAttendance";
 import Settings from "./employee/settings/Setttings";
+import Dashboard from "./employee/Dashboard";
 import PageNotFound from "../PageNotFound";
 
 // icons
@@ -125,8 +126,8 @@ export default function EmployeePanel() {
         {/* Content */}
         <main className="flex-1 overflow-auto p-6">
           <Routes>
-            <Route path="/" element={<DashboardLanding />} />
-            <Route path="/dashboard" element={<DashboardLanding />} />
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/announcement" element={<Announcement />} />
             <Route path="/myattendance" element={<MyAttendance />} />
             <Route path="/settings" element={<Settings />} />
@@ -135,89 +136,5 @@ export default function EmployeePanel() {
         </main>
       </div>
     </div>
-  );
-}
-
-/* ---------------- DASHBOARD ---------------- */
-
-function DashboardLanding() {
-  const recent = [
-    {
-      date: "2025-11-02",
-      place: "Tech Park",
-      in: "09:00 AM",
-      out: "06:00 PM",
-      status: "Present",
-      hours: "9h",
-    },
-    {
-      date: "2025-11-01",
-      place: "Tech Park",
-      in: "09:15 AM",
-      out: "06:00 PM",
-      status: "Late",
-      hours: "8h 45m",
-    },
-  ];
-
-  return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatCard title="Attendance Rate" value="80%" />
-        <StatCard title="Present Days" value="3" />
-        <StatCard title="Late Arrivals" value="1" />
-        <StatCard title="Absent Days" value="1" />
-      </div>
-
-      <div className="bg-white rounded-lg shadow border">
-        <div className="px-6 py-4 border-b">
-          <h3 className="text-lg font-semibold">Recent Attendance</h3>
-        </div>
-
-        <div className="p-4 space-y-3">
-          {recent.map((r, i) => (
-            <div
-              key={i}
-              className="flex items-center justify-between bg-gray-50 p-4 rounded-lg border"
-            >
-              <div>
-                <p className="font-medium">{r.date}</p>
-                <p className="text-xs text-gray-500">{r.place}</p>
-              </div>
-
-              <div className="text-sm">
-                {r.in} - {r.out}
-              </div>
-
-              <StatusPill status={r.status} />
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function StatCard({ title, value }) {
-  return (
-    <div className="bg-white border rounded-lg p-4 shadow-sm">
-      <p className="text-xs text-gray-500">{title}</p>
-      <p className="text-2xl font-bold mt-2">{value}</p>
-    </div>
-  );
-}
-
-function StatusPill({ status }) {
-  const cls =
-    status === "Present"
-      ? "bg-green-100 text-green-700"
-      : status === "Late"
-        ? "bg-yellow-100 text-yellow-700"
-        : "bg-red-100 text-red-700";
-
-  return (
-    <span className={`px-3 py-1 rounded-full text-xs font-medium ${cls}`}>
-      {status}
-    </span>
   );
 }

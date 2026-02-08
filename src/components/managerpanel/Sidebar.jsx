@@ -10,6 +10,7 @@ import {
   FaChartLine,
   FaCog,
   FaTimes,
+  FaBell,
 } from "react-icons/fa";
 
 export default function Sidebar({ open, setOpen }) {
@@ -23,6 +24,7 @@ export default function Sidebar({ open, setOpen }) {
     { name: "Location", icon: <FaMapMarkerAlt />, path: "/manager/location" },
     { name: "Employees", icon: <FaUsers />, path: "/manager/employees" },
     { name: "Reports", icon: <FaChartLine />, path: "/manager/reports" },
+    { name: "Announcements", icon: <FaBell />, path: "/manager/announcements" },
     { name: "Settings", icon: <FaCog />, path: "/manager/settings" },
   ];
 

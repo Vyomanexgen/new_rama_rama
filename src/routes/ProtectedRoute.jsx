@@ -1,7 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 
 const SUPER_ADMIN_EMAIL = "superadmin@gmail.com";
@@ -36,10 +36,26 @@ export default function ProtectedRoute({ role, children }) {
       }
 
       // MANAGER / EMPLOYEE
-      const snap = await getDoc(doc(db, "users", user.uid));
+      const userRef = doc(db, "users", user.uid);
+      const snap = await getDoc(userRef);
 
-      if (snap.exists() && snap.data().role === role) {
-        setAllowed(true);
+      if (snap.exists()) {
+        setAllowed(snap.data().role === role);
+      } else if (role === "employee") {
+        try {
+          await setDoc(
+            userRef,
+            {
+              email: user.email,
+              role: "employee",
+              createdAt: serverTimestamp(),
+            },
+            { merge: true }
+          );
+          setAllowed(true);
+        } catch {
+          setAllowed(false);
+        }
       } else {
         setAllowed(false);
       }

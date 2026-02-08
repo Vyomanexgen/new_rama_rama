@@ -12,9 +12,11 @@
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
+    "@react-google-maps/api": "^2.20.8",
     "@reduxjs/toolkit": "^2.10.1",
     "@simplewebauthn/browser": "^13.2.2",
     "@tailwindcss/vite": "^4.1.17",
+    "axios": "^1.13.4",
     "chart.js": "^4.5.1",
     "firebase": "^12.6.0",
     "leaflet": "^1.9.4",

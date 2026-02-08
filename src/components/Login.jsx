@@ -31,7 +31,7 @@ export default function Login({ role }) {
     const entered = email.trim().toLowerCase();
 
     // If this Login instance is for a role, enforce the exact allowed email
-    if (role) {
+    if (role && role !== "employee") {
       const allowed = ROLE_EMAILS[role];
       if (!allowed) {
         setError("Internal error: unknown role");
@@ -48,17 +48,16 @@ export default function Login({ role }) {
     try {
       const res = await signInWithEmailAndPassword(auth, entered, password);
 
-      // Ensure user document exists/updated in Firestore with role & email
+      // Ensure user document exists/updated in Firestore
       try {
-        await setDoc(
-          doc(db, "users", res.user.uid),
-          {
-            email: res.user.email,
-            ...(role ? { role } : {}),
-            lastLogin: new Date(),
-          },
-          { merge: true }
-        );
+        const payload = role === "employee"
+          ? { lastLogin: new Date() }
+          : {
+              email: res.user.email,
+              ...(role ? { role } : {}),
+              lastLogin: new Date(),
+            };
+        await setDoc(doc(db, "users", res.user.uid), payload, { merge: true });
       } catch (e) {
         console.error("Failed to write user document:", e);
       }
@@ -84,7 +83,7 @@ export default function Login({ role }) {
     }
   };
 
-  const allowedEmail = role ? ROLE_EMAILS[role] : null;
+  const allowedEmail = role && role !== "employee" ? ROLE_EMAILS[role] : null;
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-cover bg-center relative"
@@ -94,7 +93,7 @@ export default function Login({ role }) {
       <div className="w-full max-w-md z-20 bg-white/10 backdrop-blur-xl rounded-2xl p-8">
         <h2 className="text-3xl font-bold text-center text-white">{role ? `${role[0].toUpperCase()}${role.slice(1)} Login` : "Login"}</h2>
 
-        {allowedEmail && (
+        {allowedEmail && role !== "manager" && (
           <p className="text-sm text-gray-200 text-center mt-2">Only use: <strong>{allowedEmail}</strong></p>
         )}
 
