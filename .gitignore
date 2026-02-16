@@ -3,11 +3,13 @@ node_modules/
 dist/
 .env
 .env.*
+!.env.example
 .firebase/
 node_modules
 dist
 .env
 .env.*
+!.env.example
 npm-debug.log
 
 
